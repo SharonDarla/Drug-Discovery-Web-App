@@ -23,10 +23,10 @@ The platform includes:
 
 # Architecture Overview:
 
-+------------------+        +------------------+        +------------------+
++-------------------++        +------------------+        +------------------+
 ||     Frontend     || <----> |   Flask / Python | <----> |    Supabase      |
 || (React/Vite)     || HTTP   | (Model Inference)| REST   | (DB/Auth/Storage)|
-+------------------+        +------------------+        +------------------+
++-------------------++        +------------------+        +------------------+
 
 1. Frontend talks to Flask API to generate molecules.
 2. Flask API runs the PyTorch model , generates SMILES.
