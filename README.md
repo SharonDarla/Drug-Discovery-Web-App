@@ -24,8 +24,8 @@ The platform includes:
 # Architecture Overview:
 
 +------------------+        +------------------+        +------------------+
-|     Frontend     | <----> |   Flask / Python | <----> |    Supabase      |
-| (React/Vite)     | HTTP   | (Model Inference)| REST   | (DB/Auth/Storage)|
+||     Frontend     || <----> |   Flask / Python | <----> |    Supabase      |
+|| (React/Vite)     || HTTP   | (Model Inference)| REST   | (DB/Auth/Storage)|
 +------------------+        +------------------+        +------------------+
 
 1. Frontend talks to Flask API to generate molecules.
