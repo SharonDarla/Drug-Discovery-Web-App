@@ -94,3 +94,4 @@ The platform includes:
 
 - Contributions are welcome :)
 - feel free to open an issue or submit a pull request.
+# Project updated 
