@@ -1,4 +1,4 @@
-## Drug Molecule Generator with Diffusion Model - https://drugdiscovery.netlify.app/
+## Drug Molecule Generator with Diffusion Model 
 
 # Introduction:
 This project presents a web-based platform that integrates a diffusion model trained on SMILES data to generate novel drug-like molecules. It also features an interactive molecular editor, allowing users to visualize and modify generated molecules seamlessly.
