@@ -7,11 +7,16 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Frontend Specific Ignores (Targets subfolders)
+**/node_modules/
+**/dist/
+**/dist-ssr/
 *.local
-docs/
+
+# Backend Specific Ignores (Targets subfolders)
+**/__pycache__/
+**/.env
+**/*.pyc
 
 # Editor directories and files
 .vscode/*
@@ -23,3 +28,4 @@ docs/
 *.njsproj
 *.sln
 *.sw?
+
