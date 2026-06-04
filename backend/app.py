@@ -7,11 +7,27 @@ from rdkit.Chem import Draw, AllChem, Descriptors, QED, Crippen, Lipinski
 from io import BytesIO
 import base64
 import numpy as np
+import os
+from dotenv import load_dotenv
+from flask_sqlalchemy import SQLAlchemy 
+
+# Ensure we load the correct .env file relative to the script location
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)  # Enabling CORS for all routes
 
-# Define the SimpleDiffusionModel architecture matching model.pth (Colab notebook)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = None
+try:
+    db = SQLAlchemy(app)  # <-- This activates SQLAlchemy
+except Exception as e:
+    print(f"DATABASE INITIALIZATION ERROR: {e}")
+
+# Defining the SimpleDiffusionModel architecture matching model.pth
 class SimpleDiffusionModel(nn.Module):
     def __init__(self, input_dim=2048, hidden_dim=1024):
         super(SimpleDiffusionModel, self).__init__()
@@ -28,29 +44,27 @@ class SimpleDiffusionModel(nn.Module):
 
 # Initialize and load model weights
 model = SimpleDiffusionModel()
+model_path = os.path.join(BASE_DIR, "model.pth")
 try:
-    model.load_state_dict(torch.load("model.pth", map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
     model.eval()
-    print("SUCCESS: PyTorch model successfully loaded from model.pth")
+    print(f"SUCCESS: PyTorch model successfully loaded from {model_path}")
 except Exception as e:
     print(f"ERROR: Failed to load PyTorch model: {e}")
-
-# Utility: SMILES string to Morgan fingerprint (2048-bit numpy array)
+# 1: SMILES string to Morgan fingerprint (2048-bit numpy array)
 def smiles_to_fp(smiles: str):
     mol = Chem.MolFromSmiles(smiles)
     if mol:
         fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=2048)
         return np.array(fp, dtype=np.float32)
     return None
-
-# Utility: Convert RDKit Mol object to base64-encoded PNG image
+# 2: Convert RDKit Mol object to base64-encoded PNG image
 def mol_to_image_base64(mol) -> str:
     img = Draw.MolToImage(mol, size=(300, 300))
     buf = BytesIO()
     img.save(buf, format="PNG")
     return base64.b64encode(buf.getvalue()).decode("utf-8")
-
-# Utility: Generate 3D coordinates for the Molecule (atoms & bonds)
+# 3: Generate 3D coordinates for the Molecule (atoms & bonds)
 def get_3d_coordinates(mol):
     try:
         # Add hydrogens for accurate 3D geometry calculations
@@ -61,7 +75,6 @@ def get_3d_coordinates(mol):
         AllChem.MMFFOptimizeMolecule(mol_3d)
         # Remove hydrogens for visual clarity in heavy atom display
         mol_3d = Chem.RemoveHs(mol_3d)
-        
         conf = mol_3d.GetConformer()
         atoms = []
         for atom in mol_3d.GetAtoms():
@@ -73,7 +86,6 @@ def get_3d_coordinates(mol):
                 "y": float(pos.y),
                 "z": float(pos.z)
             })
-        
         bonds = []
         for bond in mol_3d.GetBonds():
             bonds.append({
@@ -104,13 +116,12 @@ def get_3d_coordinates(mol):
                 "type": "single" if bond.GetBondTypeAsDouble() == 1.0 else "double" if bond.GetBondTypeAsDouble() == 2.0 else "triple" if bond.GetBondTypeAsDouble() == 3.0 else "single"
             })
         return {"atoms": atoms, "bonds": bonds}
-
-# Utility: Create a chemically-valid bioisosteric optimized derivative
+# 4: Create a chemically-valid bioisosteric optimized derivative
 def generate_derivative(mol):
     try:
         derived_mol = Chem.Mol(mol)
         fluorinated = False
-        
+    
         # 1. Attempt to add a fluorine atom (bioisosteric replacement of H) at a carbon position
         for atom in derived_mol.GetAtoms():
             if atom.GetSymbol() == 'C' and atom.GetTotalNumHs() > 0:
@@ -121,7 +132,6 @@ def generate_derivative(mol):
                 Chem.SanitizeMol(derived_mol)
                 fluorinated = True
                 break
-                
         # 2. If no carbon has hydrogens, try to append a methyl group at carbon, nitrogen, or oxygen
         if not fluorinated:
             for atom in derived_mol.GetAtoms():
@@ -136,7 +146,6 @@ def generate_derivative(mol):
     except Exception as e:
         print(f"WARNING: Failed to create chemical derivative: {e}")
         return mol
-
 @app.route("/predict", methods=["POST"])
 def predict():
     data = request.get_json()
@@ -230,6 +239,63 @@ def predict():
         mutagenicity = "High Risk" if "N(=O)=O" in smiles or rng.uniform() > 0.85 else "Medium Risk" if rng.uniform() > 0.70 else "Low Risk"
         skin = "High Risk" if rng.uniform() > 0.8 else "Medium Risk" if rng.uniform() > 0.5 else "Low Risk"
 
+        # Log prediction to Supabase
+        if db is not None:
+            try:
+                # Check if a prediction for this SMILES already exists
+                check_query = db.text("SELECT 1 FROM predictions WHERE input_smiles = :input_smiles LIMIT 1")
+                exists = db.session.execute(check_query, {"input_smiles": smiles}).fetchone()
+                
+                if exists:
+                    print(f"INFO: Prediction for SMILES '{smiles}' already exists in Supabase. Skipping insert to avoid duplicate.")
+                else:
+                    insert_query = db.text("""
+                        INSERT INTO predictions (
+                            input_smiles, prediction_score, similarity,
+                            input_mw, input_logp, input_qed, input_hbd, input_hba, input_rot_bonds,
+                            generated_smiles, gen_mw, gen_logp, gen_qed, gen_hbd, gen_hba, gen_rot_bonds,
+                            kinase_inhibition, gpcr_binding, ion_channel, nuclear_receptor,
+                            hepatotoxicity, cardiotoxicity, mutagenicity, skin_sensitization
+                        ) VALUES (
+                            :input_smiles, :prediction_score, :similarity,
+                            :input_mw, :input_logp, :input_qed, :input_hbd, :input_hba, :input_rot_bonds,
+                            :generated_smiles, :gen_mw, :gen_logp, :gen_qed, :gen_hbd, :gen_hba, :gen_rot_bonds,
+                            :kinase_inhibition, :gpcr_binding, :ion_channel, :nuclear_receptor,
+                            :hepatotoxicity, :cardiotoxicity, :mutagenicity, :skin_sensitization
+                        )
+                    """)
+                    db.session.execute(insert_query, {
+                        "input_smiles": smiles,
+                        "prediction_score": prediction_score,
+                        "similarity": similarity_score,
+                        "input_mw": mw,
+                        "input_logp": logp,
+                        "input_qed": qed,
+                        "input_hbd": hbd,
+                        "input_hba": hba,
+                        "input_rot_bonds": rot_bonds,
+                        "generated_smiles": derivative_smiles,
+                        "gen_mw": dmw,
+                        "gen_logp": dlogp,
+                        "gen_qed": dqed,
+                        "gen_hbd": dhbd,
+                        "gen_hba": dhba,
+                        "gen_rot_bonds": drot_bonds,
+                        "kinase_inhibition": kinase,
+                        "gpcr_binding": gpcr,
+                        "ion_channel": ion_channel,
+                        "nuclear_receptor": nuclear,
+                        "hepatotoxicity": hepatotox,
+                        "cardiotoxicity": cardiotox,
+                        "mutagenicity": mutagenicity,
+                        "skin_sensitization": skin
+                    })
+                    db.session.commit()
+                    print("SUCCESS: Logged prediction record to Supabase predictions table")
+            except Exception as db_err:
+                db.session.rollback()
+                print(f"WARNING: Failed to log prediction to Supabase: {db_err}")
+
         return jsonify({
             "success": True,
             "prediction": round(prediction_score, 1),
@@ -278,6 +344,122 @@ def predict():
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/history', methods=['GET'])
+def get_history():
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 500
+
+    try:
+        limit = min(int(request.args.get('limit', 50)), 200)
+        search = request.args.get('search', '').strip()
+
+        if search:
+            query = db.text("""
+                SELECT id, input_smiles, generated_smiles, prediction_score, similarity,
+                       input_mw, input_logp, input_qed, input_hbd, input_hba, input_rot_bonds,
+                       gen_mw, gen_logp, gen_qed, gen_hbd, gen_hba, gen_rot_bonds,
+                       kinase_inhibition, gpcr_binding, ion_channel, nuclear_receptor,
+                       hepatotoxicity, cardiotoxicity, mutagenicity, skin_sensitization,
+                       created_at
+                FROM predictions
+                WHERE input_smiles ILIKE :search
+                ORDER BY id DESC
+                LIMIT :limit
+            """)
+            rows = db.session.execute(query, {"search": f"%{search}%", "limit": limit}).fetchall()
+        else:
+            query = db.text("""
+                SELECT id, input_smiles, generated_smiles, prediction_score, similarity,
+                       input_mw, input_logp, input_qed, input_hbd, input_hba, input_rot_bonds,
+                       gen_mw, gen_logp, gen_qed, gen_hbd, gen_hba, gen_rot_bonds,
+                       kinase_inhibition, gpcr_binding, ion_channel, nuclear_receptor,
+                       hepatotoxicity, cardiotoxicity, mutagenicity, skin_sensitization,
+                       created_at
+                FROM predictions
+                ORDER BY id DESC
+                LIMIT :limit
+            """)
+            rows = db.session.execute(query, {"limit": limit}).fetchall()
+
+        results = []
+        for row in rows:
+            results.append({
+                "id": row.id,
+                "input_smiles": row.input_smiles,
+                "generated_smiles": row.generated_smiles,
+                "prediction_score": float(row.prediction_score) if row.prediction_score else 0,
+                "similarity": float(row.similarity) if row.similarity else 0,
+                "input_properties": {
+                    "mw": float(row.input_mw) if row.input_mw else 0,
+                    "logp": float(row.input_logp) if row.input_logp else 0,
+                    "qed": float(row.input_qed) if row.input_qed else 0,
+                    "hbd": int(row.input_hbd) if row.input_hbd else 0,
+                    "hba": int(row.input_hba) if row.input_hba else 0,
+                    "rot_bonds": int(row.input_rot_bonds) if row.input_rot_bonds else 0,
+                },
+                "gen_properties": {
+                    "mw": float(row.gen_mw) if row.gen_mw else 0,
+                    "logp": float(row.gen_logp) if row.gen_logp else 0,
+                    "qed": float(row.gen_qed) if row.gen_qed else 0,
+                    "hbd": int(row.gen_hbd) if row.gen_hbd else 0,
+                    "hba": int(row.gen_hba) if row.gen_hba else 0,
+                    "rot_bonds": int(row.gen_rot_bonds) if row.gen_rot_bonds else 0,
+                },
+                "bioactivity": {
+                    "kinase_inhibition": float(row.kinase_inhibition) if row.kinase_inhibition else 0,
+                    "gpcr_binding": float(row.gpcr_binding) if row.gpcr_binding else 0,
+                    "ion_channel": float(row.ion_channel) if row.ion_channel else 0,
+                    "nuclear_receptor": float(row.nuclear_receptor) if row.nuclear_receptor else 0,
+                },
+                "toxicity": {
+                    "hepatotoxicity": row.hepatotoxicity or "Unknown",
+                    "cardiotoxicity": row.cardiotoxicity or "Unknown",
+                    "mutagenicity": row.mutagenicity or "Unknown",
+                    "skin_sensitization": row.skin_sensitization or "Unknown",
+                },
+                "created_at": str(row.created_at) if row.created_at else None,
+            })
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR in /api/history: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/history/<int:record_id>', methods=['DELETE'])
+def delete_history(record_id):
+    if db is None:
+        return jsonify({"error": "Database not connected"}), 500
+
+    try:
+        query = db.text("DELETE FROM predictions WHERE id = :id")
+        result = db.session.execute(query, {"id": record_id})
+        db.session.commit()
+
+        if result.rowcount == 0:
+            return jsonify({"error": "Record not found"}), 404
+
+        return jsonify({"success": True, "message": f"Record {record_id} deleted"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        print(f"ERROR in DELETE /api/history: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/test-db', methods=['GET'])
+def test_db():
+    if db is None:
+        return jsonify({"status": "error", "message": "Database not initialized (missing or incorrect DATABASE_URL)"}), 500
+    try:
+        db.session.execute(db.text('SELECT 1'))
+        return jsonify({"status": "success", "message": "Successfully connected to Supabase!"}), 200
+    except Exception as e:
+        db.session.rollback()  # Roll back the transaction to prevent session lockout
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
