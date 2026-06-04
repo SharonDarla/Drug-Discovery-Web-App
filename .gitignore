@@ -11,11 +11,15 @@ lerna-debug.log*
 **/node_modules/
 **/dist/
 **/dist-ssr/
+frontend/.env
+frontend/.env.*
 *.local
 
 # Backend Specific Ignores (Targets subfolders)
 **/__pycache__/
 **/.env
+backend/.env
+backend/.env.* 
 **/*.pyc
 
 # Editor directories and files
