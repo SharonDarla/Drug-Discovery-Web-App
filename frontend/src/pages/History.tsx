@@ -128,9 +128,10 @@ const History = () => {
     setLoading(true);
     setError(null);
 
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
     const url = search
-      ? `http://localhost:5000/api/history?search=${encodeURIComponent(search)}`
-      : 'http://localhost:5000/api/history';
+      ? `${baseUrl}/api/history?search=${encodeURIComponent(search)}`
+      : `${baseUrl}/api/history`;
 
     fetch(url)
       .then(res => {
@@ -164,7 +165,7 @@ const History = () => {
     if (!window.confirm('Delete this prediction record? This cannot be undone.')) return;
 
     setDeletingId(id);
-    fetch(`http://localhost:5000/api/history/${id}`, { method: 'DELETE' })
+    fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/history/${id}`, { method: 'DELETE' })
       .then(res => {
         if (!res.ok) throw new Error('Delete failed');
         return res.json();

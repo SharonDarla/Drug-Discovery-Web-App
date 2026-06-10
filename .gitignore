@@ -6,7 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
-
+requirements.txt
 # Frontend Specific Ignores (Targets subfolders)
 **/node_modules/
 **/dist/
