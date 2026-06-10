@@ -128,7 +128,7 @@ const History = () => {
     setLoading(true);
     setError(null);
 
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '');
     const url = search
       ? `${baseUrl}/api/history?search=${encodeURIComponent(search)}`
       : `${baseUrl}/api/history`;
