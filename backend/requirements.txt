@@ -1,4 +1,5 @@
---find-links https://download.pytorch.org/whl/cpu
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.6.0
 annotated-types==0.7.0
 anyio==4.13.0
 blinker==1.9.0
@@ -43,7 +44,6 @@ setuptools==81.0.0
 SQLAlchemy==2.0.50
 StrEnum==0.4.15
 sympy==1.14.0
-torch==2.12.0+cpu
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 websockets==15.0.1
