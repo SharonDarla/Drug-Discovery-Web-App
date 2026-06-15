@@ -168,7 +168,7 @@ const Index = () => {
 
     setIsLoading(true);
 
-    fetch("http://localhost:5000/predict", {
+    fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/predict`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

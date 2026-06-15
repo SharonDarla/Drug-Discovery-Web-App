@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { Navbar } from '@/components/shared/Navbar';
 import { Footer } from '@/components/shared/Footer';
 import { Button } from '@/components/shared/Button';
@@ -128,10 +127,10 @@ const History = () => {
     setLoading(true);
     setError(null);
 
+    const baseURL=(import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/,'');
     const url = search
-      ? `http://localhost:5000/api/history?search=${encodeURIComponent(search)}`
-      : 'http://localhost:5000/api/history';
-
+    ? `${baseURL}/api/history?search=${encodeURIComponent(search)}`
+    : `${baseURL}/api/history`;
     fetch(url)
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch history');
@@ -164,7 +163,7 @@ const History = () => {
     if (!window.confirm('Delete this prediction record? This cannot be undone.')) return;
 
     setDeletingId(id);
-    fetch(`http://localhost:5000/api/history/${id}`, { method: 'DELETE' })
+    fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/$/, '')}/api/history/${id}`, { method: 'DELETE' })
       .then(res => {
         if (!res.ok) throw new Error('Delete failed');
         return res.json();
@@ -240,7 +239,7 @@ const History = () => {
           <div className="flex flex-col items-center justify-center py-16 text-slate-450 dark:text-slate-550 animate-fadeIn max-w-md mx-auto text-center">
             <AlertCircle className="w-10 h-10 mb-3 text-rose-500" />
             <span className="text-sm font-bold text-rose-600">{error}</span>
-            <p className="text-xs mt-2 text-slate-500">Make sure the Flask backend is active on port 5000.</p>
+            <p className="text-xs mt-2 text-slate-500">Make sure the Flask backend is active.</p>
           </div>
         )}
 
@@ -293,7 +292,7 @@ const History = () => {
                         </code>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 font-semibold">Gen</span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Gen</span>
                         <code className="text-xs font-mono text-teal-600 dark:text-teal-400 truncate max-w-[200px] sm:max-w-[320px] block" title={record.generated_smiles}>
                           {record.generated_smiles}
                         </code>
