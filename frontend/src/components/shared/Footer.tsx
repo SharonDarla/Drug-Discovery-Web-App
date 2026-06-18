@@ -29,7 +29,7 @@ export const Footer = () => {
               <div className="p-1.5 rounded-lg bg-gradient-to-tr from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/10">
                 <FlaskConical className="w-4.5 h-4.5" />
               </div>
-              <span>DrugGen <span className="text-[10px] text-blue-500 font-bold">AI</span></span>
+              <span>DrugGen</span>
             </Link>
             <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-sm">
               An AI-powered molecule design and analysis application built for bioinformaticians and drug researchers. Accelerate research workflow by running generative pipelines on demand.

@@ -73,8 +73,8 @@ function buildMolBlock(molecule: MoleculeData): string {
 
   // Header block: molecule name, program/timestamp, comment
   lines.push(molecule.name || 'Molecule');
-  lines.push('  DrugGen   3D');
-  lines.push('  Exported from DrugGen AI platform');
+  lines.push('  DrugGen 3D');
+  lines.push('  Exported from DrugGen platform');
 
   // Counts line
   const atomCount = molecule.atoms.length;

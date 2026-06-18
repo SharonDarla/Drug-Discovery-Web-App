@@ -267,13 +267,12 @@ const Index = () => {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-850 dark:text-slate-100 max-w-4xl leading-tight">
             AI-Powered{' '}
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              Drug Discovery
+              Drug Discovery & Molecular Analysis Platform
             </span>{' '}
-            Platform
           </h1>
           
           <p className="mt-6 text-sm sm:text-base lg:text-lg text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
-            Design, analyze and explore molecules using modern AI/ML computational tools. Instantly optimize chemical structures for absorption, bioavailability, and binding target scores.
+            Design, analyze and explore molecules using AI/ML computational tools. Instantly optimize chemical structures for absorption, bioavailability, and binding target scores.
           </p>
 
           <div className="mt-10 flex flex-wrap justify-center gap-4">

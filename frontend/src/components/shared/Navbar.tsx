@@ -79,7 +79,7 @@ export const Navbar = () => {
             <FlaskConical className="w-5 h-5" />
           </div>
           <span className="tracking-tight bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-300 bg-clip-text text-transparent">
-            DrugGen <span className="text-xs font-semibold text-blue-500 align-super">AI</span>
+            DrugGen
           </span>
         </Link>
 
