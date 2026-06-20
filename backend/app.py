@@ -429,7 +429,7 @@ def get_history():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/api/history/<int:record_id>', methods=['DELETE'])
+@app.route('/api/history/<string:record_id>', methods=['DELETE'])
 def delete_history(record_id):
     if db is None:
         return jsonify({"error": "Database not connected"}), 500

@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 
 // Shape of one history record from the API
 interface HistoryRecord {
-  id: number;
+  id: string;
   input_smiles: string;
   generated_smiles: string;
   prediction_score: number;
@@ -115,8 +115,8 @@ const History = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Modal State for Visualizer
   const [selectedRecord, setSelectedRecord] = useState<HistoryRecord | null>(null);
@@ -159,7 +159,7 @@ const History = () => {
   }, [searchQuery]);
 
   // Delete a record
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     if (!window.confirm('Delete this prediction record? This cannot be undone.')) return;
 
     setDeletingId(id);
